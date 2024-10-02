@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python to JavaScript Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Python to JavaScript Converter</h2>
+    <label for="pythonCode">Enter Python Code:</label>
+    <textarea id="pythonCode" placeholder="Enter Python code here..."></textarea>
+
+    <button onclick="convertToJavaScript()">Convert</button>
+
+    <h3>JavaScript Code:</h3>
+    <textarea id="javascriptCode" placeholder="JavaScript code will appear here..." readonly></textarea>
+
+    <div class="error" id="error"></div>
+</div>
+
+<script>
+    function convertToJavaScript() {
+        const pythonCode = document.getElementById("pythonCode").value;
+        const errorBox = document.getElementById("error");
+        errorBox.innerHTML = ''; // Clear any previous errors
+
+        try {
+            let javascriptCode = pythonCode
+                // 関数定義の変換
+                .replace(/def\s+([a-zA-Z_]\w*)\s*\((.*?)\)\s*:/g, 'function $1($2) {')
+                // printをconsole.logに変換
+                .replace(/print\((.*?)\)/g, 'console.log($1)')
+                // if, elif, else
+                .replace(/if\s+(.*?):/g, 'if ($1) {')
+                .replace(/elif\s+(.*?):/g, 'else if ($1) {')
+                .replace(/else:/g, 'else {')
+                // whileループの変換
+                .replace(/while\s+(.*?):/g, 'while ($1) {')
+                // forループ (range関数含む)
+                .replace(/for\s+(\w+)\s+in\s+range\((\w+),\s*(\w+)\):/g, 'for (let $1 = $2; $1 < $3; $1++) {')
+                .replace(/for\s+(\w+)\s+in\s+range\((\w+)\):/g, 'for (let $1 = 0; $1 < $2; $1++) {')
+                // 通常のforループ (リストやオブジェクト)
+                .replace(/for\s+(\w+)\s+in\s+(.*?):/g, 'for (let $1 of $2) {')
+                // True, False, Noneをそれぞれtrue, false, nullに変換
+                .replace(/\bTrue\b/g, 'true')
+                .replace(/\bFalse\b/g, 'false')
+                .replace(/\bNone\b/g, 'null')
+                // コメントの変換
+                .replace(/#(.*)/g, '// $1')
+                // pass文をコメント化
+                .replace(/\bpass\b/g, '// pass')
+                // 辞書とリストの変換
+                .replace(/(\w+)\s*=\s*\[(.*?)\]/g, 'let $1 = [$2]')
+                .replace(/(\w+)\s*=\s*\{(.*?)\}/g, 'let $1 = {$2}')
+                // Python式の例外処理
+                .replace(/try:/g, 'try {')
+                .replace(/except\s*\((.*?)\):/g, 'catch ($1) {')
+                .replace(/except:/g, 'catch {')
+                .replace(/finally:/g, 'finally {');
+
+            // インデント解析とブロック処理
+            let lines = javascriptCode.split('\n');
+            let indentStack = [];
+            let convertedLines = [];
+
+            lines.forEach(line => {
+                let currentIndent = line.match(/^\s*/)[0].length;
+                
+                // 現在のインデントレベルに応じて閉じ括弧を追加
+                while (indentStack.length && indentStack[indentStack.length - 1] > currentIndent) {
+                    indentStack.pop();
+                    convertedLines.push(' '.repeat(currentIndent) + '}');
+                }
+                convertedLines.push(line);
+
+                // 波括弧を必要とする行の後にインデントを追加
+                if (line.trim().endsWith('{')) {
+                    indentStack.push(currentIndent);
+                }
+            });
+
+            // 最後のインデントに対して閉じ括弧を追加
+            while (indentStack.length) {
+                indentStack.pop();
+                convertedLines.push('}');
+            }
+
+            javascriptCode = convertedLines.join('\n');
+
+            // 変換結果を表示
+            document.getElementById("javascriptCode").value = javascriptCode;
+        } catch (error) {
+            errorBox.innerHTML = 'エラー: ' + error.message;
+        }
+    }
+</script>
+
+</body>
+</html>
